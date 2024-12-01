@@ -1,0 +1,498 @@
+package QLDonHang;
+
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
+ */
+
+
+import Home.TrangChu;
+import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
+import com.microsoft.sqlserver.jdbc.SQLServerException;
+import javax.swing.table.DefaultTableModel;
+import java.sql.*;
+import java.util.UUID;
+import javax.swing.JOptionPane;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+
+/**
+ *
+ * @author Admin
+ */
+public class QLDonHangFrame extends javax.swing.JFrame {
+
+    /**
+     * Creates new form QLDonHangFrame
+     */
+    public QLDonHangFrame() {
+        initComponents();
+        loadDonHangData();
+        // Đặt hành động khi nhấn X là đóng cửa sổ này mà không thoát ứng dụng
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+
+        txtTimKiem.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                timKiem();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                timKiem();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                timKiem();
+            }
+        });
+    }
+
+    public class DatabaseConnection {
+
+        private static final String server = "localhost";
+        private static final String user = "sa";
+        private static final String password = "123456";
+        private static final String db = "QUANLY";
+        private static final int port = 1433;
+
+        public static Connection getConnection() throws SQLServerException {
+            SQLServerDataSource ds = new SQLServerDataSource();
+            ds.setUser(user);
+            ds.setPassword(password);
+            ds.setDatabaseName(db);
+            ds.setPortNumber(port);
+            ds.setServerName(server);
+            ds.setEncrypt(false);
+            return ds.getConnection();
+        }
+    }
+
+    // Phương thức tải dữ liệu từ bảng DonHang
+    private void loadDonHangData() {
+        DefaultTableModel model = (DefaultTableModel) tableDonHang.getModel();
+        model.setRowCount(0); // Xóa các hàng cũ
+
+        String query = "SELECT MaDonHang, NgayGiaoDich, TongTien, TrangThaiDonHang, PhuongThucThanhToan FROM DonHang";
+
+        try (Connection conn = DatabaseConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(query); ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                model.addRow(new Object[]{
+                    rs.getString("MaDonHang"),
+                    rs.getTimestamp("NgayGiaoDich"),
+                    rs.getDouble("TongTien"),
+                    rs.getString("TrangThaiDonHang"),
+                    rs.getString("PhuongThucThanhToan")
+                });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void timKiem() {
+        String timKiemTheo = cbxTimKiem.getSelectedItem().toString();
+        String timKiemText = txtTimKiem.getText().trim();
+
+        DefaultTableModel model = (DefaultTableModel) tableDonHang.getModel();
+        model.setRowCount(0); // Xóa các hàng cũ
+
+        String query = "";
+
+        // Lọc dữ liệu tùy theo lựa chọn trong ComboBox
+        if ("Mã đơn hàng".equals(timKiemTheo)) {
+            query = "SELECT MaDonHang, NgayGiaoDich, TongTien, TrangThaiDonHang, PhuongThucThanhToan FROM DonHang WHERE MaDonHang LIKE ?";
+        } else if ("Ngày giao dịch".equals(timKiemTheo)) {
+            query = "SELECT MaDonHang, NgayGiaoDich, TongTien, TrangThaiDonHang, PhuongThucThanhToan FROM DonHang WHERE NgayGiaoDich LIKE ?";
+        }
+
+        // Thực hiện tìm kiếm
+        try (Connection conn = DatabaseConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            // Sử dụng "LIKE" để tìm kiếm theo từ khóa
+            stmt.setString(1, "%" + timKiemText + "%");
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("MaDonHang"),
+                        rs.getTimestamp("NgayGiaoDich"),
+                        rs.getDouble("TongTien"),
+                        rs.getString("TrangThaiDonHang"),
+                        rs.getString("PhuongThucThanhToan")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Lỗi khi tìm kiếm!");
+        }
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jPanel1 = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        btnThem = new javax.swing.JButton();
+        btnXacNhan = new javax.swing.JButton();
+        btnXoa = new javax.swing.JButton();
+        btnChiTiet = new javax.swing.JButton();
+        jPanel2 = new javax.swing.JPanel();
+        cbxTimKiem = new javax.swing.JComboBox<>();
+        txtTimKiem = new javax.swing.JTextField();
+        btnLamMoi = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        tableDonHang = new javax.swing.JTable();
+        btnBack = new javax.swing.JButton();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+
+        jPanel1.setBackground(new java.awt.Color(255, 255, 255));
+
+        jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
+        jLabel1.setText("Quản lý đơn hàng");
+
+        btnThem.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/icons8_add_40px.png"))); // NOI18N
+        btnThem.setText("Thêm");
+        btnThem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnThemActionPerformed(evt);
+            }
+        });
+
+        btnXacNhan.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/icons8_edit_40px.png"))); // NOI18N
+        btnXacNhan.setText("Xác nhận");
+        btnXacNhan.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnXacNhanActionPerformed(evt);
+            }
+        });
+
+        btnXoa.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/icons8_delete_40px.png"))); // NOI18N
+        btnXoa.setText("Xoá");
+        btnXoa.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnXoaActionPerformed(evt);
+            }
+        });
+
+        btnChiTiet.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/icons8_eye_40px.png"))); // NOI18N
+        btnChiTiet.setText("Xem chi tiết");
+        btnChiTiet.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnChiTietActionPerformed(evt);
+            }
+        });
+
+        jPanel2.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel2.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        jPanel2.setPreferredSize(new java.awt.Dimension(474, 71));
+
+        cbxTimKiem.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Mã đơn hàng", "Ngày giao dịch" }));
+        cbxTimKiem.setPreferredSize(new java.awt.Dimension(121, 22));
+
+        btnLamMoi.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/icons8_reset_25px_1.png"))); // NOI18N
+        btnLamMoi.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLamMoiActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap(22, Short.MAX_VALUE)
+                .addComponent(cbxTimKiem, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(txtTimKiem, javax.swing.GroupLayout.PREFERRED_SIZE, 279, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btnLamMoi, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(12, 12, 12))
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGap(17, 17, 17)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(btnLamMoi, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(txtTimKiem, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(cbxTimKiem, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(20, Short.MAX_VALUE))
+        );
+
+        tableDonHang.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null}
+            },
+            new String [] {
+                "Mã đơn hàng", "Ngày giao dịch", "Tổng tiền", "Trạng thái đơn hàng", "Phương thức thanh toán"
+            }
+        ));
+        jScrollPane1.setViewportView(tableDonHang);
+
+        btnBack.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/rsz_back.png"))); // NOI18N
+        btnBack.setText("Quay về");
+        btnBack.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnBackActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(24, 24, 24)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jLabel1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(btnBack))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(btnThem)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(btnXacNhan)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(btnXoa)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 18, Short.MAX_VALUE)
+                        .addComponent(btnChiTiet)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, 487, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(16, Short.MAX_VALUE))
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1)
+                .addContainerGap())
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel1, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(btnBack, javax.swing.GroupLayout.Alignment.TRAILING))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(27, 27, 27)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(btnThem)
+                            .addComponent(btnXacNhan)
+                            .addComponent(btnXoa)
+                            .addComponent(btnChiTiet)))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(11, 11, 11)
+                        .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, 73, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(29, 29, 29)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, Short.MAX_VALUE))
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void btnThemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnThemActionPerformed
+        // TODO add your handling code here:
+        TaoDonHangFrame taoDonHangFrame = new TaoDonHangFrame();
+        taoDonHangFrame.setVisible(true);
+    }//GEN-LAST:event_btnThemActionPerformed
+
+    private void btnXacNhanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnXacNhanActionPerformed
+        // TODO add your handling code here:
+        int selectedRow = tableDonHang.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn một đơn hàng để xác nhận!");
+            return;
+        }
+
+        // Lấy mã đơn hàng từ dòng đang chọn
+        String maDonHang = tableDonHang.getValueAt(selectedRow, 0).toString();
+        String trangThaiHienTai = tableDonHang.getValueAt(selectedRow, 3).toString();
+
+        // Kiểm tra trạng thái đơn hàng hiện tại
+        if ("Đang xử lý".equals(trangThaiHienTai)) {
+            String updateQuery = "UPDATE DonHang SET TrangThaiDonHang = ? WHERE MaDonHang = ?";
+
+            try (Connection conn = DatabaseConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(updateQuery)) {
+                // Cập nhật trạng thái đơn hàng thành "Đã giao"
+                stmt.setString(1, "Đã giao");
+                stmt.setString(2, maDonHang);
+
+                int rowsUpdated = stmt.executeUpdate();
+                if (rowsUpdated > 0) {
+                    JOptionPane.showMessageDialog(this, "Cập nhật trạng thái đơn hàng thành 'Đã giao' thành công!");
+                    loadDonHangData(); // Tải lại dữ liệu bảng để hiển thị cập nhật
+                } else {
+                    JOptionPane.showMessageDialog(this, "Không thể cập nhật trạng thái đơn hàng!");
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Lỗi khi cập nhật trạng thái đơn hàng!");
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Chỉ có thể xác nhận đơn hàng đang ở trạng thái 'Đang xử lý'!");
+        }
+    }//GEN-LAST:event_btnXacNhanActionPerformed
+
+    private void btnXoaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnXoaActionPerformed
+        // TODO add your handling code here:
+        int selectedRow = tableDonHang.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn một đơn hàng để xóa!");
+            return;
+        }
+
+        // Lấy mã đơn hàng từ dòng được chọn
+        String maDonHang = tableDonHang.getValueAt(selectedRow, 0).toString();
+
+        // Xác nhận xóa
+        int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa đơn hàng này?",
+                "Xóa đơn hàng", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            // Bắt đầu giao dịch (transaction) để đảm bảo tính toàn vẹn dữ liệu
+            String deleteChiTietQuery = "DELETE FROM ChiTietDonHang WHERE MaDonHang = ?";
+            String deleteDonHangQuery = "DELETE FROM DonHang WHERE MaDonHang = ?";
+
+            try (Connection conn = DatabaseConnection.getConnection()) {
+                conn.setAutoCommit(false); // Tắt tự động commit để thực hiện giao dịch
+
+                try (PreparedStatement stmt1 = conn.prepareStatement(deleteChiTietQuery); PreparedStatement stmt2 = conn.prepareStatement(deleteDonHangQuery)) {
+
+                    // Xóa dữ liệu trong bảng ChiTietDonHang
+                    stmt1.setString(1, maDonHang);
+                    int rowsDeletedChiTiet = stmt1.executeUpdate();
+
+                    // Xóa đơn hàng trong bảng DonHang
+                    stmt2.setString(1, maDonHang);
+                    int rowsDeletedDonHang = stmt2.executeUpdate();
+
+                    if (rowsDeletedChiTiet > 0 && rowsDeletedDonHang > 0) {
+                        conn.commit(); // Commit giao dịch
+                        JOptionPane.showMessageDialog(this, "Xóa đơn hàng thành công!");
+                        loadDonHangData(); // Tải lại dữ liệu bảng để hiển thị kết quả
+                    } else {
+                        conn.rollback(); // Rollback nếu có lỗi
+                        JOptionPane.showMessageDialog(this, "Không thể xóa đơn hàng!");
+                    }
+
+                } catch (SQLException e) {
+                    conn.rollback(); // Rollback nếu có lỗi trong quá trình thực hiện câu lệnh
+                    JOptionPane.showMessageDialog(this, "Lỗi khi xóa đơn hàng!");
+                    e.printStackTrace();
+                }
+
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "Lỗi kết nối cơ sở dữ liệu!");
+                e.printStackTrace();
+            }
+        }
+    }//GEN-LAST:event_btnXoaActionPerformed
+
+    private void btnChiTietActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnChiTietActionPerformed
+        // TODO add your handling code here:
+        // Lấy dòng đã chọn trong bảng
+        int selectedRow = tableDonHang.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn một đơn hàng để xem chi tiết!");
+            return;
+        }
+
+        // Lấy mã đơn hàng từ dòng được chọn
+        String maDonHang = tableDonHang.getValueAt(selectedRow, 0).toString();
+
+        // Mở cửa sổ mới để hiển thị chi tiết đơn hàng
+        DonHangChiTietFrame chiTietFrame = new DonHangChiTietFrame(maDonHang);
+        chiTietFrame.setVisible(true);
+    }//GEN-LAST:event_btnChiTietActionPerformed
+
+    private void btnLamMoiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLamMoiActionPerformed
+        // TODO add your handling code here:
+        // Gọi lại phương thức loadDonHangData để tải lại dữ liệu trong bảng
+        loadDonHangData();
+        // Nếu cần, bạn có thể làm mới các trường tìm kiếm hoặc các thành phần khác ở đây
+        txtTimKiem.setText("");  // Xóa nội dung ô tìm kiếm
+    }//GEN-LAST:event_btnLamMoiActionPerformed
+
+    private void btnBackActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBackActionPerformed
+        // TODO add your handling code here:
+        new TrangChu().setVisible(true); // Mở trang chủ
+                dispose(); // Đóng cửa sổ hiện tại
+    }//GEN-LAST:event_btnBackActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(QLDonHangFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(QLDonHangFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(QLDonHangFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(QLDonHangFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new QLDonHangFrame().setVisible(true);
+            }
+        });
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnBack;
+    private javax.swing.JButton btnChiTiet;
+    private javax.swing.JButton btnLamMoi;
+    private javax.swing.JButton btnThem;
+    private javax.swing.JButton btnXacNhan;
+    private javax.swing.JButton btnXoa;
+    private javax.swing.JComboBox<String> cbxTimKiem;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel2;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JTable tableDonHang;
+    private javax.swing.JTextField txtTimKiem;
+    // End of variables declaration//GEN-END:variables
+}
