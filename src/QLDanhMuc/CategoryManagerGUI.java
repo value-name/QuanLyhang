@@ -1,5 +1,6 @@
 package QLDanhMuc;
 
+import Home.TrangChu;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -18,12 +19,14 @@ public class CategoryManagerGUI extends JFrame {
     private JTable categoryTable;
     private DefaultTableModel tableModel;
     private JTextField descriptionField;
+    private String loaiTaiKhoan;
 
-    public CategoryManagerGUI() {
+    public CategoryManagerGUI(String loaiTaiKhoan) {
         setTitle("Quản lý danh mục sản phẩm");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        this.loaiTaiKhoan=loaiTaiKhoan;
         initUI();
     }
 
@@ -141,11 +144,8 @@ public class CategoryManagerGUI extends JFrame {
              @Override
              public void actionPerformed(ActionEvent e) {
               // Nạp lại toàn bộ danh mục
-              loadCategories();
-              // Xóa trường nhập liệu sau tìm kiếm (nếu cần)
-               categoryIdField.setText("");      // Xóa ô "Mã danh mục"
-               categoryNameField.setText("");   // Xóa ô "Tên danh mục"
-               descriptionField.setText("");    // Xóa ô "Mô tả"
+              dispose(); // Đóng cửa sổ hiện tại
+              new TrangChu(loaiTaiKhoan).setVisible(true);  
     }
 });
 
@@ -272,7 +272,7 @@ public class CategoryManagerGUI extends JFrame {
 //            }
 //        }
 //    }
-        private void deleteCategory() {
+private void deleteCategory() {
     int selectedRow = categoryTable.getSelectedRow();
 
     // Kiểm tra xem có dòng nào được chọn hay không
@@ -288,36 +288,49 @@ public class CategoryManagerGUI extends JFrame {
     int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa danh mục này?", "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
 
     if (confirm == JOptionPane.YES_OPTION) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
+        try (Connection conn = DriverManager.getConnection(
+                "jdbc:sqlserver://localhost:1433;databaseName=QUANLY;user=sa;password=123456;encrypt=false")) {
 
-        try {
-            conn = DriverManager.getConnection("jdbc:sqlserver://localhost:1433;databaseName=QUANLY;username=sa;password=123456;encrypt=false");
-            String query = "DELETE FROM DanhMucSanPham WHERE MaDanhMuc = ?";
-            stmt = conn.prepareStatement(query);
-            stmt.setString(1, categoryId);
+            // Kiểm tra xem danh mục có sản phẩm liên quan không
+            String checkQuery = "SELECT COUNT(*) FROM SanPham WHERE MaDanhMuc = ?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkQuery)) {
+                checkStmt.setString(1, categoryId);
 
-            stmt.executeUpdate();
-            JOptionPane.showMessageDialog(this, "Xóa danh mục thành công!");
-            loadCategories();
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        JOptionPane.showMessageDialog(this, "Không thể xóa danh mục vì đã có sản phẩm liên quan.", "Thông báo", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                }
+            }
+
+            // Xóa danh mục
+            String deleteQuery = "DELETE FROM DanhMucSanPham WHERE MaDanhMuc = ?";
+            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery)) {
+                deleteStmt.setString(1, categoryId);
+
+                int rowsAffected = deleteStmt.executeUpdate();
+                if (rowsAffected > 0) {
+                    JOptionPane.showMessageDialog(this, "Xóa danh mục thành công!");
+                    loadCategories(); // Cập nhật lại danh sách
+                } else {
+                    JOptionPane.showMessageDialog(this, "Không tìm thấy danh mục để xóa.", "Thông báo", JOptionPane.WARNING_MESSAGE);
+                }
+            }
 
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Lỗi xóa danh mục: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-        } finally {
-            try {
-                if (stmt != null) stmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
     }
 }
 
-    private void searchCategory() {
-    String keyword = categoryNameField.getText().trim();
-    if (keyword.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Vui lòng nhập từ khóa để tìm kiếm.", "Thông báo", JOptionPane.WARNING_MESSAGE);
+private void searchCategory() {
+    String maDanhMuc = categoryIdField.getText().trim();
+    String tenDanhMuc = categoryNameField.getText().trim();
+    String moTa = descriptionField.getText().trim();
+
+    if (maDanhMuc.isEmpty() && tenDanhMuc.isEmpty() && moTa.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Vui lòng nhập ít nhất một thông tin để tìm kiếm.", "Thông báo", JOptionPane.WARNING_MESSAGE);
         return;
     }
 
@@ -327,10 +340,19 @@ public class CategoryManagerGUI extends JFrame {
 
     try {
         conn = DriverManager.getConnection("jdbc:sqlserver://localhost:1433;databaseName=QUANLY;username=sa;password=123456;encrypt=false");
-        String query = "SELECT * FROM DanhMucSanPham WHERE TenDanhMuc LIKE ? OR MoTa LIKE ?";
-        stmt = conn.prepareStatement(query);
-        stmt.setString(1, "%" + keyword + "%");
-        stmt.setString(2, "%" + keyword + "%");
+
+        // Truy vấn SQL linh hoạt dựa trên các trường nhập liệu
+        StringBuilder queryBuilder = new StringBuilder("SELECT * FROM DanhMucSanPham WHERE 1=1");
+        if (!maDanhMuc.isEmpty()) queryBuilder.append(" AND MaDanhMuc LIKE ?");
+        if (!tenDanhMuc.isEmpty()) queryBuilder.append(" AND TenDanhMuc LIKE ?");
+        if (!moTa.isEmpty()) queryBuilder.append(" AND MoTa LIKE ?");
+
+        stmt = conn.prepareStatement(queryBuilder.toString());
+
+        int paramIndex = 1;
+        if (!maDanhMuc.isEmpty()) stmt.setString(paramIndex++, "%" + maDanhMuc + "%");
+        if (!tenDanhMuc.isEmpty()) stmt.setString(paramIndex++, "%" + tenDanhMuc + "%");
+        if (!moTa.isEmpty()) stmt.setString(paramIndex++, "%" + moTa + "%");
 
         rs = stmt.executeQuery();
 
@@ -343,7 +365,7 @@ public class CategoryManagerGUI extends JFrame {
         }
 
         if (!found) {
-            JOptionPane.showMessageDialog(this, "Không tìm thấy danh mục phù hợp với từ khóa: " + keyword, "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Không tìm thấy danh mục phù hợp.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
         }
 
     } catch (SQLException e) {
@@ -359,12 +381,11 @@ public class CategoryManagerGUI extends JFrame {
     }
 }
 
-
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                new CategoryManagerGUI().setVisible(true);
+                new CategoryManagerGUI("a").setVisible(true);
             }
         });
     }

@@ -20,11 +20,12 @@ import javax.swing.event.DocumentListener;
  * @author Admin
  */
 public class QLTaiKhoanFrame extends javax.swing.JFrame {
-
+private String loaiTaiKhoan;
     /**
      * Creates new form QLTaiKhoanFrame
      */
-    public QLTaiKhoanFrame() {
+    public QLTaiKhoanFrame(String loaiTaiKhoan) {
+         this.loaiTaiKhoan = loaiTaiKhoan;
         initComponents();
         fetchData();
         
@@ -332,7 +333,7 @@ public class QLTaiKhoanFrame extends javax.swing.JFrame {
 
     private void btnBackActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBackActionPerformed
         // TODO add your handling code here:
-        new TrangChu().setVisible(true); // Mở trang chủ
+        new TrangChu(loaiTaiKhoan).setVisible(true); // Mở trang chủ
                 dispose(); // Đóng cửa sổ hiện tại
     }//GEN-LAST:event_btnBackActionPerformed
 
@@ -355,43 +356,64 @@ public class QLTaiKhoanFrame extends javax.swing.JFrame {
     }
 
     private void xoaNguoiDung() {
-        int row = tableTaiKhoan.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn một người dùng để xóa!");
-            return;
-        }
+    int row = tableTaiKhoan.getSelectedRow();
+    if (row == -1) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn một người dùng để xóa!");
+        return;
+    }
 
-        String maNguoiDung = (String) tableTaiKhoan.getValueAt(row, 4); // Lấy mã người dùng từ cột đầu tiên
-        int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa người dùng này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            String sqlDeleteAccount = "DELETE FROM TAIKHOAN WHERE MaNguoiDung = ?";
-            String sqlDeleteUser = "DELETE FROM NGUOIDUNG WHERE MaNguoiDung = ?";
-            try (Connection conn = getConnection()) {
-                conn.setAutoCommit(false); // Bắt đầu transaction
-
-                try (PreparedStatement psDeleteAccount = conn.prepareStatement(sqlDeleteAccount); PreparedStatement psDeleteUser = conn.prepareStatement(sqlDeleteUser)) {
-
-                    // Xóa tài khoản của người dùng
-                    psDeleteAccount.setString(1, maNguoiDung);
-                    psDeleteAccount.executeUpdate();
-
-                    // Xóa người dùng
-                    psDeleteUser.setString(1, maNguoiDung);
-                    psDeleteUser.executeUpdate();
-
-                    conn.commit(); // Xác nhận transaction
-                    JOptionPane.showMessageDialog(this, "Xóa người dùng và tài khoản thành công!");
-                    fetchData(); // Cập nhật bảng sau khi xóa
-                } catch (SQLException e) {
-                    conn.rollback(); // Hoàn tác nếu có lỗi
-                    e.printStackTrace();
-                    JOptionPane.showMessageDialog(this, "Lỗi khi xóa người dùng hoặc tài khoản!", "Error", JOptionPane.ERROR_MESSAGE);
+    String maNguoiDung = (String) tableTaiKhoan.getValueAt(row, 4); // Lấy mã người dùng từ cột thứ 5 (the correct column for MaNguoiDung)
+    
+    // Kiểm tra xem người dùng có phải là admin không
+    String sqlCheckAdmin = "SELECT Role FROM NGUOIDUNG WHERE MaNguoiDung = ?"; // Assuming Role is the column storing user roles (admin, user, etc.)
+    try (Connection conn = getConnection(); PreparedStatement psCheckAdmin = conn.prepareStatement(sqlCheckAdmin)) {
+        psCheckAdmin.setString(1, maNguoiDung);
+        try (ResultSet rs = psCheckAdmin.executeQuery()) {
+            if (rs.next()) {
+                String role = rs.getString("Role");
+                if ("admin".equalsIgnoreCase(role)) {
+                    JOptionPane.showMessageDialog(this, "Không thể xóa tài khoản admin!");
+                    return; // Prevent deletion of admin account
                 }
-            } catch (SQLException e) {
-                e.printStackTrace();
             }
         }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Lỗi khi kiểm tra tài khoản admin!", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
     }
+
+    int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa người dùng này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
+    if (confirm == JOptionPane.YES_OPTION) {
+        String sqlDeleteAccount = "DELETE FROM TAIKHOAN WHERE MaNguoiDung = ?";
+        String sqlDeleteUser = "DELETE FROM NGUOIDUNG WHERE MaNguoiDung = ?";
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false); // Bắt đầu transaction
+
+            try (PreparedStatement psDeleteAccount = conn.prepareStatement(sqlDeleteAccount); PreparedStatement psDeleteUser = conn.prepareStatement(sqlDeleteUser)) {
+
+                // Xóa tài khoản của người dùng
+                psDeleteAccount.setString(1, maNguoiDung);
+                psDeleteAccount.executeUpdate();
+
+                // Xóa người dùng
+                psDeleteUser.setString(1, maNguoiDung);
+                psDeleteUser.executeUpdate();
+
+                conn.commit(); // Xác nhận transaction
+                JOptionPane.showMessageDialog(this, "Xóa người dùng và tài khoản thành công!");
+                fetchData(); // Cập nhật bảng sau khi xóa
+            } catch (SQLException e) {
+                conn.rollback(); // Hoàn tác nếu có lỗi
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Lỗi khi xóa người dùng hoặc tài khoản!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
 
     /**
      * @param args the command line arguments
@@ -423,7 +445,7 @@ public class QLTaiKhoanFrame extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new QLTaiKhoanFrame().setVisible(true);
+                new QLTaiKhoanFrame("a").setVisible(true);
             }
         });
     }

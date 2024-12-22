@@ -5,19 +5,19 @@ import QLNguoiDung.QLTaiKhoanFrame;
 import QLDonHang.QLDonHangFrame;
 import ThongKeDoanhThu.ThongKeDoanhThu;
 import QLSanPham.QuanLySanPham;
-import QLTonKho.QuanLyTonKho;
-import com.sun.jdi.connect.spi.Connection;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import QLSanPhamHetHan.QuanLySanPhamHetHan;
 import javax.swing.*;
 
 public class TrangChu extends javax.swing.JFrame {
 
-    public TrangChu() {
+    private String loaiTaiKhoan; // Biến để lưu loại tài khoản (admin hoặc nhân viên)
+
+    // Constructor nhận loại tài khoản
+    public TrangChu(String loaiTaiKhoan) {
+        this.loaiTaiKhoan = loaiTaiKhoan; // Gán loại tài khoản
         initComponents();
     }
 
-    
     private void initComponents() {
         jButton1 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
@@ -36,40 +36,43 @@ public class TrangChu extends javax.swing.JFrame {
         jButton2.setText("Quản lý danh mục sản phẩm");
         jButton2.addActionListener(evt -> {
             this.dispose(); // Đóng trang chủ trước khi mở trang quản lý danh mục sản phẩm
-            new CategoryManagerGUI().setVisible(true);
+            new CategoryManagerGUI(loaiTaiKhoan).setVisible(true);
         });
 
-        jButton3.setText("Quản lý tồn kho");
+        jButton3.setText("Quản lý sản phẩm hết hạn");
         jButton3.addActionListener(evt -> {
             this.dispose(); // Đóng trang chủ trước khi mở trang quản lý tồn kho
-            new QuanLyTonKho().setVisible(true);
+            new QuanLySanPhamHetHan(loaiTaiKhoan).setVisible(true);
         });
 
         jButton4.setText("Quản lý đơn hàng");
         jButton4.addActionListener(evt -> {
             this.dispose(); // Đóng trang chủ trước khi mở trang quản lý đơn hàng
-            new QLDonHangFrame().setVisible(true);
+            new QLDonHangFrame(loaiTaiKhoan).setVisible(true);
         });
 
         jButton5.setText("Quản lý người dùng");
-        jButton5.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent evt) {
-                TrangChu.this.dispose(); // Đóng trang chủ trước khi mở trang quản lý người dùng
-                new QLTaiKhoanFrame().setVisible(true);
+        jButton5.addActionListener(evt -> {
+            if ("admin".equals(loaiTaiKhoan)) {
+                // Nếu là admin thì mở giao diện quản lý người dùng
+                this.dispose(); // Đóng trang chủ
+                new QLTaiKhoanFrame(loaiTaiKhoan).setVisible(true);
+            } else {
+                // Nếu không phải admin thì hiển thị thông báo
+                JOptionPane.showMessageDialog(this, "Bạn không có quyền truy cập chức năng này!", "Thông báo", JOptionPane.WARNING_MESSAGE);
             }
         });
 
         jButton7.setText("Thống kê doanh thu");
         jButton7.addActionListener(evt -> {
             this.dispose(); // Đóng trang chủ trước khi mở trang thống kê doanh thu
-            new ThongKeDoanhThu().setVisible(true);
+            new ThongKeDoanhThu(loaiTaiKhoan).setVisible(true);
         });
 
         jButton8.setText("Quản lý sản phẩm");
         jButton8.addActionListener(evt -> {
             this.dispose(); // Đóng trang chủ trước khi mở trang quản lý sản phẩm
-            new QuanLySanPham().setVisible(true);
+            new QuanLySanPham(loaiTaiKhoan).setVisible(true);
         });
 
         // Layout
@@ -116,10 +119,11 @@ public class TrangChu extends javax.swing.JFrame {
         pack();
     }
 
-
-
     public static void main(String args[]) {
-        java.awt.EventQueue.invokeLater(() -> new TrangChu().setVisible(true));
+        java.awt.EventQueue.invokeLater(() -> {
+            // Khởi tạo giao diện Trang Chủ với quyền 'admin' để kiểm tra
+            new TrangChu("admin").setVisible(true);
+        });
     }
 
     private javax.swing.JButton jButton1;

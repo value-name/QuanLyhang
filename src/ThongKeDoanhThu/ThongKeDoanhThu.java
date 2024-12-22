@@ -1,6 +1,12 @@
 package ThongKeDoanhThu;
 
 import Home.TrangChu;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.CategoryDataset;
+import org.jfree.data.category.DefaultCategoryDataset;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -14,29 +20,26 @@ public class ThongKeDoanhThu extends JFrame {
     private JTable tableDonHang;
     private DefaultTableModel model;
     private Connection conn;
+    private String loaiTaiKhoan;
+    private JPanel panelChart;  // Panel chứa biểu đồ
 
-    public ThongKeDoanhThu() {
+    public ThongKeDoanhThu(String loaiTaiKhoan) {
+        this.loaiTaiKhoan = loaiTaiKhoan;
         setTitle("Thống kê doanh thu");
-        setSize(800, 600);
+        setSize(1000, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         // Panel chứa các input cho khoảng thời gian
         JPanel panelInput = new JPanel(new FlowLayout());
-        // Nút quay về với icon
-JButton btnQuayVe = new JButton("Quay về");
-btnQuayVe.setIcon(new ImageIcon(getClass().getResource("/icon/rsz_back.png"))); // Thêm icon từ đường dẫn
+        JButton btnQuayVe = new JButton("Quay về");
+        btnQuayVe.setIcon(new ImageIcon(getClass().getResource("/icon/rsz_back.png")));
+        btnQuayVe.setPreferredSize(new Dimension(120, 40));
+        ImageIcon icon = new ImageIcon(getClass().getResource("/icon/rsz_back.png"));
+        Image image = icon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
+        btnQuayVe.setIcon(new ImageIcon(image));
+        panelInput.add(btnQuayVe);
 
-// Thay đổi kích thước nút và font nếu muốn phóng to
-btnQuayVe.setPreferredSize(new Dimension(120, 40)); // Đặt kích thước nút lớn hơn
-
-// Thêm nút vào panel
-panelInput.add(btnQuayVe);
-ImageIcon icon = new ImageIcon(getClass().getResource("/icon/rsz_back.png"));
-Image image = icon.getImage().getScaledInstance(30,30, Image.SCALE_SMOOTH); // Thay đổi kích thước icon
-btnQuayVe.setIcon(new ImageIcon(image));
-
-        
         panelInput.add(new JLabel("Từ ngày (yyyy-MM-dd):"));
         txtFromDate = new JTextField(10);
         panelInput.add(txtFromDate);
@@ -48,28 +51,32 @@ btnQuayVe.setIcon(new ImageIcon(image));
         JButton btnXemThongKe = new JButton("Xem thống kê");
         panelInput.add(btnXemThongKe);
 
-        // Nút quay về
-
+        JButton btnXemBieuDo = new JButton("Xem biểu đồ");
+        panelInput.add(btnXemBieuDo);  // Thêm nút "Xem biểu đồ"
 
         // Bảng hiển thị đơn hàng
         model = new DefaultTableModel();
-        model.setColumnIdentifiers(new String[]{"Mã đơn hàng", "Mã sản phẩm", "Ngày giao dịch", "Tổng tiền", "Trạng thái", "Phương thức thanh toán"});
+        model.setColumnIdentifiers(new String[]{"Mã đơn hàng", "Ngày giao dịch", "Tổng tiền", "Trạng thái", "Phương thức thanh toán"});
         tableDonHang = new JTable(model);
         JScrollPane scrollPane = new JScrollPane(tableDonHang);
 
         // Label hiển thị tổng doanh thu
         JLabel lblTongDoanhThu = new JLabel("Tổng doanh thu: ");
         txtTongDoanhThu = new JTextField(10);
-        txtTongDoanhThu.setEditable(false); // Không cho phép chỉnh sửa
+        txtTongDoanhThu.setEditable(false);
         JPanel panelTongDoanhThu = new JPanel(new FlowLayout());
         panelTongDoanhThu.add(lblTongDoanhThu);
         panelTongDoanhThu.add(txtTongDoanhThu);
+
+        // Panel chứa biểu đồ
+        panelChart = new JPanel(new BorderLayout());
 
         // Layout chính
         setLayout(new BorderLayout());
         add(panelInput, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
         add(panelTongDoanhThu, BorderLayout.SOUTH);
+        add(panelChart, BorderLayout.EAST);  // Thêm panel biểu đồ vào bên phải
 
         // Kết nối tới cơ sở dữ liệu
         connectDatabase();
@@ -79,6 +86,21 @@ btnQuayVe.setIcon(new ImageIcon(image));
             @Override
             public void actionPerformed(ActionEvent e) {
                 xemThongKe();
+                panelChart.removeAll();  // Xóa nội dung cũ khi xem thống kê
+                panelChart.revalidate();  // Cập nhật lại giao diện
+                panelChart.repaint();
+            }
+        });
+
+        // Xử lý sự kiện khi nhấn nút "Xem biểu đồ"
+        btnXemBieuDo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Hiển thị biểu đồ khi nhấn "Xem biểu đồ"
+                panelChart.removeAll();  // Xóa bảng cũ
+                panelChart.add(createChartPanel(), BorderLayout.CENTER);  // Thêm biểu đồ mới
+                panelChart.revalidate();  // Cập nhật lại giao diện
+                panelChart.repaint();  // Vẽ lại giao diện
             }
         });
 
@@ -86,8 +108,8 @@ btnQuayVe.setIcon(new ImageIcon(image));
         btnQuayVe.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new TrangChu().setVisible(true); // Mở trang chủ
-                dispose(); // Đóng cửa sổ hiện tại
+                new TrangChu(loaiTaiKhoan).setVisible(true);
+                dispose();
             }
         });
     }
@@ -96,20 +118,21 @@ btnQuayVe.setIcon(new ImageIcon(image));
         try {
             String connectionUrl = "jdbc:sqlserver://localhost:1433;databaseName=QUANLY;user=sa;password=123456;encrypt=true;trustServerCertificate=true;";
             conn = DriverManager.getConnection(connectionUrl);
+            System.out.println("Kết nối thành công!");
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Không kết nối được với cơ sở dữ liệu.", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Không kết nối được với cơ sở dữ liệu.\n" + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
 
     private void xemThongKe() {
-        model.setRowCount(0); // Xóa dữ liệu cũ trong bảng
-        txtTongDoanhThu.setText(""); // Đặt lại tổng doanh thu
+        model.setRowCount(0);
+        txtTongDoanhThu.setText("");
 
         try {
             String fromDate = txtFromDate.getText();
             String toDate = txtToDate.getText();
-            String query = "SELECT MaDonHang, MaSanPham, NgayGiaoDich, TongTien, TrangThaiDonHang, PhuongThucThanhToan " +
+            String query = "SELECT MaDonHang, NgayGiaoDich, TongTien, TrangThaiDonHang, PhuongThucThanhToan " +
                            "FROM DonHang WHERE NgayGiaoDich BETWEEN ? AND ?";
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setString(1, fromDate);
@@ -121,7 +144,6 @@ btnQuayVe.setIcon(new ImageIcon(image));
             while (rs.next()) {
                 Vector<Object> row = new Vector<>();
                 row.add(rs.getString("MaDonHang"));
-                row.add(rs.getString("MaSanPham"));
                 row.add(rs.getDate("NgayGiaoDich"));
                 row.add(rs.getDouble("TongTien"));
                 row.add(rs.getString("TrangThaiDonHang"));
@@ -141,9 +163,49 @@ btnQuayVe.setIcon(new ImageIcon(image));
         }
     }
 
+    private JPanel createChartPanel() {
+        CategoryDataset dataset = createDataset();  // Tạo dataset từ dữ liệu
+
+        // Tạo biểu đồ từ dataset
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Doanh thu theo ngày", // Tiêu đề biểu đồ
+                "Ngày", // Trục X
+                "Doanh thu (VND)", // Trục Y
+                dataset // Dữ liệu
+        );
+
+        // Tạo và trả về ChartPanel chứa biểu đồ
+        return new ChartPanel(chart);
+    }
+
+    private CategoryDataset createDataset() {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        try {
+            String fromDate = txtFromDate.getText();
+            String toDate = txtToDate.getText();
+            String query = "SELECT NgayGiaoDich, SUM(TongTien) AS TongDoanhThu " +
+                           "FROM DonHang WHERE NgayGiaoDich BETWEEN ? AND ? " +
+                           "GROUP BY NgayGiaoDich ORDER BY NgayGiaoDich";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, fromDate);
+            ps.setString(2, toDate);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                dataset.addValue(rs.getDouble("TongDoanhThu"), "Doanh thu", rs.getDate("NgayGiaoDich").toString());
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi lấy dữ liệu cho biểu đồ.", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+
+        return dataset;
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            ThongKeDoanhThu frame = new ThongKeDoanhThu();
+            ThongKeDoanhThu frame = new ThongKeDoanhThu("a");
             frame.setVisible(true);
         });
     }

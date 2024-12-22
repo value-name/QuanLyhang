@@ -1,14 +1,17 @@
 package QLSanPham;
 
+import java.awt.event.ComponentAdapter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
 public class ThemSanPhamFrame extends javax.swing.JFrame {
 
     public ThemSanPhamFrame() {
+ setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
         initComponents();
         setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
     }
@@ -116,71 +119,77 @@ public class ThemSanPhamFrame extends javax.swing.JFrame {
     }
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {                                         
-        // Lấy giá trị từ các JTextField
-        String tenSP = jTextField6.getText();
-        String giaBan = jTextField1.getText();
-        String soLuongTon = jTextField4.getText();
-        String moTa = jTextField5.getText();
-        String maDanhMuc = jTextField3.getText();
+         // Lấy giá trị từ các JTextField
+    String tenSP = jTextField6.getText();
+    String giaBan = jTextField1.getText();
+    String soLuongTon = jTextField4.getText();
+    String moTa = jTextField5.getText();
+    String maDanhMuc = jTextField3.getText();
 
-        // Kiểm tra các trường dữ liệu không được để trống
-        if (tenSP.isEmpty() || giaBan.isEmpty() || soLuongTon.isEmpty() ||
-            moTa.isEmpty() || maDanhMuc.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Vui lòng điền đầy đủ thông tin sản phẩm.");
+    // Kiểm tra các trường dữ liệu không được để trống
+    if (tenSP.isEmpty() || giaBan.isEmpty() || soLuongTon.isEmpty() ||
+        moTa.isEmpty() || maDanhMuc.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Vui lòng điền đầy đủ thông tin sản phẩm.");
+        return;
+    }
+
+    // Kết nối cơ sở dữ liệu và thực hiện thêm sản phẩm vào bảng
+    try {
+        String url = "jdbc:sqlserver://localhost:1433;databaseName=QUANLY;user=sa;password=123456;encrypt=true;trustServerCertificate=true;";
+        Connection conn = DriverManager.getConnection(url);
+
+        // Kiểm tra sản phẩm đã tồn tại dựa trên tên sản phẩm
+        String sqlCheck = "SELECT COUNT(*) AS Count FROM SanPham WHERE TenSanPham = ?";
+        PreparedStatement pstCheck = conn.prepareStatement(sqlCheck);
+        pstCheck.setString(1, tenSP);
+        ResultSet rsCheck = pstCheck.executeQuery();
+
+        if (rsCheck.next() && rsCheck.getInt("Count") > 0) {
+            JOptionPane.showMessageDialog(this, "Sản phẩm đã tồn tại.");
+            pstCheck.close();
+            conn.close();
             return;
         }
+        pstCheck.close();
 
-        // Kết nối cơ sở dữ liệu và thực hiện thêm sản phẩm vào bảng
-        try {
-            String url = "jdbc:sqlserver://localhost:1433;databaseName=QUANLY;user=sa;password=123456;encrypt=true;trustServerCertificate=true;";
-            Connection conn = DriverManager.getConnection(url);
+        // Tìm mã sản phẩm lớn nhất hiện có
+        String sqlMax = "SELECT MAX(CAST(SUBSTRING(MaSanPham, 3, LEN(MaSanPham) - 2) AS INT)) AS MaxMa FROM SanPham";
+        PreparedStatement pstMax = conn.prepareStatement(sqlMax);
+        ResultSet rs = pstMax.executeQuery();
+        int newId = 1; // Bắt đầu từ 1 nếu bảng chưa có sản phẩm nào
 
-            // Tìm mã sản phẩm lớn nhất hiện có
-            String sqlMax = "SELECT MAX(CAST(SUBSTRING(MaSanPham, 3, LEN(MaSanPham) - 2) AS INT)) AS MaxMa FROM SanPham";
-            PreparedStatement pstMax = conn.prepareStatement(sqlMax);
-            ResultSet rs = pstMax.executeQuery();
-            int newId = 1; // Bắt đầu từ 1 nếu bảng chưa có sản phẩm nào
-
-            if (rs.next() && rs.getInt("MaxMa") > 0) {
-                newId = rs.getInt("MaxMa") + 1; // Tăng mã sản phẩm tiếp theo
-            }
-
-            String maSP = "SP" + newId; // Ghép thành mã sản phẩm mới
-
-            String sql = "INSERT INTO SanPham (MaSanPham, TenSanPham, GiaBan, SoLuongTon, MoTaSanPham, MaDanhMuc) "
-                    + "VALUES (?, ?, ?, ?, ?, ?)";
-
-            PreparedStatement pst = conn.prepareStatement(sql);
-
-            pst.setString(1, maSP);
-            pst.setString(2, tenSP);
-            pst.setString(3, giaBan);
-            pst.setString(4, soLuongTon);
-            pst.setString(5, moTa);
-            pst.setString(6, maDanhMuc);
-
-            int rowsAffected = pst.executeUpdate();
-
-            if (rowsAffected > 0) {
-                JOptionPane.showMessageDialog(this, "Sản phẩm đã được thêm thành công. Mã SP: " + maSP);
-            } else {
-                JOptionPane.showMessageDialog(this, "Thêm sản phẩm không thành công.");
-            }
-
-            pst.close();
-            conn.close();
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Lỗi khi thêm sản phẩm: " + e.getMessage());
+        if (rs.next() && rs.getInt("MaxMa") > 0) {
+            newId = rs.getInt("MaxMa") + 1; // Tăng mã sản phẩm tiếp theo
         }
-    }                                        
 
-    public static void main(String args[]) {
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new ThemSanPhamFrame().setVisible(true);
-            }
-        });
+        String maSP = "SP" + newId; // Ghép thành mã sản phẩm mới
+
+        String sql = "INSERT INTO SanPham (MaSanPham, TenSanPham, GiaBan, SoLuongTon, MoTaSanPham, MaDanhMuc) "
+                + "VALUES (?, ?, ?, ?, ?, ?)";
+
+        PreparedStatement pst = conn.prepareStatement(sql);
+
+        pst.setString(1, maSP);
+        pst.setString(2, tenSP);
+        pst.setString(3, giaBan);
+        pst.setString(4, soLuongTon);
+        pst.setString(5, moTa);
+        pst.setString(6, maDanhMuc);
+
+        int rowsAffected = pst.executeUpdate();
+
+        if (rowsAffected > 0) {
+            JOptionPane.showMessageDialog(this, "Sản phẩm đã được thêm thành công. Mã SP: " + maSP);
+        } else {
+            JOptionPane.showMessageDialog(this, "Thêm sản phẩm không thành công.");
+        }
+
+        pst.close();
+        conn.close();
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Lỗi khi thêm sản phẩm: " + e.getMessage());
+    }
     }
 
     private javax.swing.JButton jButton1;

@@ -21,11 +21,12 @@ import javax.swing.event.DocumentListener;
  * @author Admin
  */
 public class QLDonHangFrame extends javax.swing.JFrame {
-
+private String loaiTaiKhoan;
     /**
      * Creates new form QLDonHangFrame
      */
-    public QLDonHangFrame() {
+    public QLDonHangFrame(String loaiTaiKhoan) {
+         this.loaiTaiKhoan = loaiTaiKhoan;
         initComponents();
         loadDonHangData();
         // Đặt hành động khi nhấn X là đóng cửa sổ này mà không thoát ứng dụng
@@ -441,7 +442,7 @@ public class QLDonHangFrame extends javax.swing.JFrame {
 
     private void btnBackActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBackActionPerformed
         // TODO add your handling code here:
-        new TrangChu().setVisible(true); // Mở trang chủ
+         new TrangChu(loaiTaiKhoan).setVisible(true);
                 dispose(); // Đóng cửa sổ hiện tại
     }//GEN-LAST:event_btnBackActionPerformed
 
@@ -475,7 +476,7 @@ public class QLDonHangFrame extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new QLDonHangFrame().setVisible(true);
+                new QLDonHangFrame("a").setVisible(true);
             }
         });
     }

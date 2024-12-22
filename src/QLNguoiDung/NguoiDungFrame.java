@@ -121,43 +121,64 @@ public class NguoiDungFrame extends javax.swing.JFrame {
 
     // Phương thức xóa người dùng
     private void xoaNguoiDung() {
-        int row = tableNguoiDung.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn một người dùng để xóa!");
-            return;
-        }
+    int row = tableNguoiDung.getSelectedRow();
+    if (row == -1) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn một người dùng để xóa!");
+        return;
+    }
 
-        String maNguoiDung = (String) tableNguoiDung.getValueAt(row, 0); // Lấy mã người dùng từ cột đầu tiên
-        int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa người dùng này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            String sqlDeleteAccount = "DELETE FROM TAIKHOAN WHERE MaNguoiDung = ?";
-            String sqlDeleteUser = "DELETE FROM NGUOIDUNG WHERE MaNguoiDung = ?";
-            try (Connection conn = getConnection()) {
-                conn.setAutoCommit(false); // Bắt đầu transaction
+    String maNguoiDung = (String) tableNguoiDung.getValueAt(row, 0); // Lấy mã người dùng từ cột đầu tiên
+    String sqlCheckAdmin = "SELECT Role FROM NGUOIDUNG WHERE MaNguoiDung = ?"; // Giả sử có cột 'Role' để xác định quyền
 
-                try (PreparedStatement psDeleteAccount = conn.prepareStatement(sqlDeleteAccount); PreparedStatement psDeleteUser = conn.prepareStatement(sqlDeleteUser)) {
-
-                    // Xóa tài khoản của người dùng
-                    psDeleteAccount.setString(1, maNguoiDung);
-                    psDeleteAccount.executeUpdate();
-
-                    // Xóa người dùng
-                    psDeleteUser.setString(1, maNguoiDung);
-                    psDeleteUser.executeUpdate();
-
-                    conn.commit(); // Xác nhận transaction
-                    JOptionPane.showMessageDialog(this, "Xóa người dùng và tài khoản thành công!");
-                    fetchData(); // Cập nhật bảng sau khi xóa
-                } catch (SQLException e) {
-                    conn.rollback(); // Hoàn tác nếu có lỗi
-                    e.printStackTrace();
-                    JOptionPane.showMessageDialog(this, "Lỗi khi xóa người dùng hoặc tài khoản!", "Error", JOptionPane.ERROR_MESSAGE);
+    // Kiểm tra xem người dùng có phải là admin không
+    try (Connection conn = getConnection(); PreparedStatement psCheckAdmin = conn.prepareStatement(sqlCheckAdmin)) {
+        psCheckAdmin.setString(1, maNguoiDung);
+        try (ResultSet rs = psCheckAdmin.executeQuery()) {
+            if (rs.next()) {
+                String role = rs.getString("Role");
+                if ("admin".equalsIgnoreCase(role)) {
+                    JOptionPane.showMessageDialog(this, "Không thể xóa tài khoản admin!");
+                    return;
                 }
-            } catch (SQLException e) {
-                e.printStackTrace();
             }
         }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Lỗi khi kiểm tra tài khoản admin!", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
     }
+
+    int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa người dùng này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
+    if (confirm == JOptionPane.YES_OPTION) {
+        String sqlDeleteAccount = "DELETE FROM TAIKHOAN WHERE MaNguoiDung = ?";
+        String sqlDeleteUser = "DELETE FROM NGUOIDUNG WHERE MaNguoiDung = ?";
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false); // Bắt đầu transaction
+
+            try (PreparedStatement psDeleteAccount = conn.prepareStatement(sqlDeleteAccount); PreparedStatement psDeleteUser = conn.prepareStatement(sqlDeleteUser)) {
+
+                // Xóa tài khoản của người dùng
+                psDeleteAccount.setString(1, maNguoiDung);
+                psDeleteAccount.executeUpdate();
+
+                // Xóa người dùng
+                psDeleteUser.setString(1, maNguoiDung);
+                psDeleteUser.executeUpdate();
+
+                conn.commit(); // Xác nhận transaction
+                JOptionPane.showMessageDialog(this, "Xóa người dùng và tài khoản thành công!");
+                fetchData(); // Cập nhật bảng sau khi xóa
+            } catch (SQLException e) {
+                conn.rollback(); // Hoàn tác nếu có lỗi
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Lỗi khi xóa người dùng hoặc tài khoản!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
 
     private void moManHinhThem() {
         new ThemNguoiDungFrame(this).setVisible(true);
