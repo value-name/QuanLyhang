@@ -1,3 +1,0 @@
-# QuanLyHangHoa
-# QuanLyHangHoa
-# QuanLyHangHoa

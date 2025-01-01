@@ -120,19 +120,36 @@ public class NguoiDungFrame extends javax.swing.JFrame {
     }
 
     // Phương thức xóa người dùng
-    private void xoaNguoiDung() {
-        int row = tableNguoiDung.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn một người dùng để xóa!");
-            return;
+private void xoaNguoiDung() {
+    int row = tableNguoiDung.getSelectedRow();
+    if (row == -1) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn một người dùng để xóa!");
+        return;
+    }
+
+    String maNguoiDung = (String) tableNguoiDung.getValueAt(row, 0); // Lấy mã người dùng từ cột đầu tiên
+    String sqlCheckAdmin = "SELECT LoaiNguoiDung FROM NGUOIDUNG WHERE MaNguoiDung = ?"; // Giả sử có cột 'LoaiNguoiDung' để xác định quyền
+
+    try (Connection conn = getConnection()) {
+        PreparedStatement psCheckAdmin = conn.prepareStatement(sqlCheckAdmin);
+        psCheckAdmin.setString(1, maNguoiDung);
+        ResultSet rs = psCheckAdmin.executeQuery();
+
+        if (rs.next()) {
+            String loaiNguoiDung = rs.getString("LoaiNguoiDung");
+
+            // Kiểm tra nếu người dùng là admin
+            if ("admin".equalsIgnoreCase(loaiNguoiDung)) {
+                JOptionPane.showMessageDialog(this, "Không thể xóa tài khoản admin!");
+                return;
+            }
         }
 
-        String maNguoiDung = (String) tableNguoiDung.getValueAt(row, 0); // Lấy mã người dùng từ cột đầu tiên
         int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa người dùng này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             String sqlDeleteAccount = "DELETE FROM TAIKHOAN WHERE MaNguoiDung = ?";
             String sqlDeleteUser = "DELETE FROM NGUOIDUNG WHERE MaNguoiDung = ?";
-            try (Connection conn = getConnection()) {
+            try {
                 conn.setAutoCommit(false); // Bắt đầu transaction
 
                 try (PreparedStatement psDeleteAccount = conn.prepareStatement(sqlDeleteAccount); PreparedStatement psDeleteUser = conn.prepareStatement(sqlDeleteUser)) {
@@ -157,7 +174,11 @@ public class NguoiDungFrame extends javax.swing.JFrame {
                 e.printStackTrace();
             }
         }
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+}
+
 
     private void moManHinhThem() {
         new ThemNguoiDungFrame(this).setVisible(true);

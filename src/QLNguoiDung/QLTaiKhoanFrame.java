@@ -20,11 +20,12 @@ import javax.swing.event.DocumentListener;
  * @author Admin
  */
 public class QLTaiKhoanFrame extends javax.swing.JFrame {
-
+private String loaiTaiKhoan;
     /**
      * Creates new form QLTaiKhoanFrame
      */
-    public QLTaiKhoanFrame() {
+    public QLTaiKhoanFrame(String loaiTaiKhoan) {
+         this.loaiTaiKhoan = loaiTaiKhoan;
         initComponents();
         fetchData();
         
@@ -332,7 +333,7 @@ public class QLTaiKhoanFrame extends javax.swing.JFrame {
 
     private void btnBackActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBackActionPerformed
         // TODO add your handling code here:
-        new TrangChu().setVisible(true); // Mở trang chủ
+        new TrangChu(loaiTaiKhoan).setVisible(true); // Mở trang chủ
                 dispose(); // Đóng cửa sổ hiện tại
     }//GEN-LAST:event_btnBackActionPerformed
 
@@ -354,19 +355,37 @@ public class QLTaiKhoanFrame extends javax.swing.JFrame {
         return ds.getConnection();
     }
 
-    private void xoaNguoiDung() {
-        int row = tableTaiKhoan.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn một người dùng để xóa!");
-            return;
+private void xoaNguoiDung() {
+    int row = tableTaiKhoan.getSelectedRow();
+    if (row == -1) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn một người dùng để xóa!");
+        return;
+    }
+
+    String maNguoiDung = (String) tableTaiKhoan.getValueAt(row, 4); // Lấy mã người dùng từ cột thứ 5 (the correct column for MaNguoiDung)
+    String sqlCheckAdmin = "SELECT LoaiNguoiDung FROM NGUOIDUNG WHERE MaNguoiDung = ?"; // Giả sử có cột 'LoaiNguoiDung' để xác định quyền
+
+    try (Connection conn = getConnection()) {
+        // Kiểm tra xem người dùng có phải là admin hay không
+        PreparedStatement psCheckAdmin = conn.prepareStatement(sqlCheckAdmin);
+        psCheckAdmin.setString(1, maNguoiDung);
+        ResultSet rs = psCheckAdmin.executeQuery();
+
+        if (rs.next()) {
+            String loaiNguoiDung = rs.getString("LoaiNguoiDung");
+
+            // Kiểm tra nếu người dùng là admin
+            if ("admin".equalsIgnoreCase(loaiNguoiDung)) {
+                JOptionPane.showMessageDialog(this, "Không thể xóa tài khoản admin!");
+                return;
+            }
         }
 
-        String maNguoiDung = (String) tableTaiKhoan.getValueAt(row, 4); // Lấy mã người dùng từ cột đầu tiên
         int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa người dùng này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             String sqlDeleteAccount = "DELETE FROM TAIKHOAN WHERE MaNguoiDung = ?";
             String sqlDeleteUser = "DELETE FROM NGUOIDUNG WHERE MaNguoiDung = ?";
-            try (Connection conn = getConnection()) {
+            try {
                 conn.setAutoCommit(false); // Bắt đầu transaction
 
                 try (PreparedStatement psDeleteAccount = conn.prepareStatement(sqlDeleteAccount); PreparedStatement psDeleteUser = conn.prepareStatement(sqlDeleteUser)) {
@@ -391,7 +410,11 @@ public class QLTaiKhoanFrame extends javax.swing.JFrame {
                 e.printStackTrace();
             }
         }
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+}
+
 
     /**
      * @param args the command line arguments
@@ -423,7 +446,7 @@ public class QLTaiKhoanFrame extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new QLTaiKhoanFrame().setVisible(true);
+                new QLTaiKhoanFrame("a").setVisible(true);
             }
         });
     }

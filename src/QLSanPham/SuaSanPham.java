@@ -9,7 +9,10 @@ package QLSanPham;
  *
  * @author Admin
  */
-
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import javax.swing.JOptionPane;
 public class SuaSanPham extends javax.swing.JFrame {
 
     /**
@@ -18,6 +21,19 @@ public class SuaSanPham extends javax.swing.JFrame {
     public SuaSanPham() {
         initComponents();
     }
+    public SuaSanPham(String tenSanPham, double giaBan, int soLuongTon, String moTa, String maDanhMuc) {
+    initComponents();
+
+    // Hiển thị thông tin sản phẩm cũ lên giao diện
+    jTextField6.setText(tenSanPham);
+    jTextField1.setText(String.valueOf(giaBan));
+    jTextField4.setText(String.valueOf(soLuongTon));
+    jTextField7.setText(moTa);
+    jTextField3.setText(maDanhMuc);
+    setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+
+}
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -146,7 +162,43 @@ public class SuaSanPham extends javax.swing.JFrame {
     }//GEN-LAST:event_jTextField7ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
+                                     
+    // Lấy dữ liệu từ các trường nhập
+    String tenSanPham = jTextField6.getText();
+    double giaBan = Double.parseDouble(jTextField1.getText());
+    int soLuongTon = Integer.parseInt(jTextField4.getText());
+    String moTa = jTextField7.getText();
+    String maDanhMuc = jTextField3.getText();
+
+    // Kết nối với cơ sở dữ liệu và thực hiện cập nhật
+    try {
+        String url = "jdbc:sqlserver://localhost:1433;databaseName=QUANLY;user=sa;password=123456;encrypt=true;trustServerCertificate=true;";
+        Connection con = DriverManager.getConnection(url);
+
+        // Câu lệnh SQL để cập nhật sản phẩm
+        String sql = "UPDATE SanPham SET TenSanPham = ?, GiaBan = ?, SoLuongTon = ?, MoTaSanPham = ?, MaDanhMuc = ? WHERE TenSanPham = ?";
+
+        PreparedStatement stmt = con.prepareStatement(sql);
+        stmt.setString(1, tenSanPham);
+        stmt.setDouble(2, giaBan);
+        stmt.setInt(3, soLuongTon);
+        stmt.setString(4, moTa);
+        stmt.setString(5, maDanhMuc);
+        stmt.setString(6, tenSanPham);
+
+        int rowsAffected = stmt.executeUpdate();
+
+        if (rowsAffected > 0) {
+            JOptionPane.showMessageDialog(this, "Cập nhật sản phẩm thành công!");
+        } else {
+            JOptionPane.showMessageDialog(this, "Lỗi: Không tìm thấy sản phẩm để cập nhật.");
+        }
+
+        con.close();
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Lỗi: " + e.getMessage());
+    }
+
     }//GEN-LAST:event_jButton1ActionPerformed
 
     /**
@@ -166,13 +218,13 @@ public class SuaSanPham extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ThemSanPham1.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ThemSanPhamFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ThemSanPham1.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ThemSanPhamFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ThemSanPham1.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ThemSanPhamFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ThemSanPham1.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ThemSanPhamFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
         //</editor-fold>

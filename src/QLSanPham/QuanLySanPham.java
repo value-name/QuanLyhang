@@ -21,15 +21,18 @@ import java.util.ArrayList;
 public class QuanLySanPham extends javax.swing.JFrame {
     private DefaultTableModel model;
     private Connection connection;
+    private String loaiTaiKhoan;
+    
 
     /**
      * Creates new form TImKiemSanPham_1
      */
-     public QuanLySanPham() {
+     public QuanLySanPham(String loaiTaiKhoan) {
         initComponents();
         model = (DefaultTableModel) jTable2.getModel();
         connectDatabase();
         loadData();
+        this.loaiTaiKhoan=loaiTaiKhoan;
         
         jButton1.addActionListener(new ActionListener() {
             @Override
@@ -41,7 +44,7 @@ public class QuanLySanPham extends javax.swing.JFrame {
         jButton2.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new TrangChu().setVisible(true);
+                new TrangChu(loaiTaiKhoan).setVisible(true);
                 dispose(); // Đóng cửa sổ hiện tại
             }
         });
@@ -52,23 +55,92 @@ public class QuanLySanPham extends javax.swing.JFrame {
         new ThemSanPhamFrame().setVisible(true);
     }
  });
-        jButton5.addActionListener(new ActionListener() {
+jButton5.addActionListener(new ActionListener() {
     @Override
     public void actionPerformed(ActionEvent e) {
         // Lấy chỉ số dòng được chọn trong bảng
         int selectedRow = jTable2.getSelectedRow();
-        
+
         if (selectedRow >= 0) {
             // Lấy mã sản phẩm từ cột "Mã sản phẩm" trong dòng được chọn
             String maSanPham = jTable2.getValueAt(selectedRow, 0).toString();
 
+            // Kiểm tra sản phẩm hết hạn
+            PreparedStatement checkStmt = null;
+            try {
+                String checkSql = "SELECT COUNT(*) AS SoLuongHetHan FROM SanPhamHetHan WHERE MaSanPham = ?";
+                checkStmt = connection.prepareStatement(checkSql);
+                checkStmt.setString(1, maSanPham);
+
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next()) {
+                        int expiredCount = rs.getInt("SoLuongHetHan");
+                        if (expiredCount > 0) {
+                            JOptionPane.showMessageDialog(null, 
+                                "Mã sản phẩm '" + maSanPham + "' có " + expiredCount + " sản phẩm đã hết hạn trong kho.",
+                                "Cảnh báo", 
+                                JOptionPane.WARNING_MESSAGE);
+                            return; // Ngừng xử lý nếu có sản phẩm hết hạn
+                        }
+                    }
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Lỗi kiểm tra sản phẩm hết hạn: " + ex.getMessage());
+                return;
+            } finally {
+                // Đảm bảo đóng PreparedStatement
+                if (checkStmt != null) {
+                    try {
+                        checkStmt.close();
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+
+            // Kiểm tra sản phẩm có trong bảng ChiTietDonHang
+            PreparedStatement orderCheckStmt = null;
+            try {
+                String orderCheckSql = "SELECT COUNT(*) AS SoLuongDonHang FROM ChiTietDonHang WHERE MaSanPham = ?";
+                orderCheckStmt = connection.prepareStatement(orderCheckSql);
+                orderCheckStmt.setString(1, maSanPham);
+
+                try (ResultSet rs = orderCheckStmt.executeQuery()) {
+                    if (rs.next()) {
+                        int orderCount = rs.getInt("SoLuongDonHang");
+                        if (orderCount > 0) {
+                            JOptionPane.showMessageDialog(null, 
+                                "Mã sản phẩm '" + maSanPham + "' đang được sử dụng trong " + orderCount + " đơn hàng. Không thể xóa.",
+                                "Cảnh báo", 
+                                JOptionPane.WARNING_MESSAGE);
+                            return; // Ngừng xử lý nếu sản phẩm liên quan đến đơn hàng
+                        }
+                    }
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Lỗi kiểm tra đơn hàng liên quan: " + ex.getMessage());
+                return;
+            } finally {
+                // Đảm bảo đóng PreparedStatement
+                if (orderCheckStmt != null) {
+                    try {
+                        orderCheckStmt.close();
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+
             // Xác nhận việc xóa sản phẩm
             int confirm = JOptionPane.showConfirmDialog(null, "Bạn có chắc chắn muốn xóa sản phẩm này?", "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
+                PreparedStatement preparedStatement = null;
                 try {
-                    // Thực hiện câu lệnh SQL để xóa sản phẩm
+                    // Câu lệnh SQL để xóa sản phẩm
                     String sql = "DELETE FROM SanPham WHERE MaSanPham = ?";
-                    PreparedStatement preparedStatement = connection.prepareStatement(sql);
+                    preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.setString(1, maSanPham);
 
                     // Thực thi câu lệnh xóa
@@ -80,12 +152,18 @@ public class QuanLySanPham extends javax.swing.JFrame {
                     } else {
                         JOptionPane.showMessageDialog(null, "Không tìm thấy sản phẩm để xóa.");
                     }
-
-                    // Đóng PreparedStatement
-                    preparedStatement.close();
                 } catch (SQLException ex) {
                     ex.printStackTrace();
                     JOptionPane.showMessageDialog(null, "Lỗi khi xóa sản phẩm: " + ex.getMessage());
+                } finally {
+                    // Đảm bảo đóng PreparedStatement
+                    if (preparedStatement != null) {
+                        try {
+                            preparedStatement.close();
+                        } catch (SQLException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
                 }
             }
         } else {
@@ -93,26 +171,28 @@ public class QuanLySanPham extends javax.swing.JFrame {
         }
     }
 });
-         jButton4.addActionListener(new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            // Lấy dòng đã chọn trong bảng
-            int selectedRow = jTable2.getSelectedRow();
-            if (selectedRow != -1) {
-                // Lấy thông tin sản phẩm đã chọn
-                String TenSanPham = (String) model.getValueAt(selectedRow, 1); // Tên sản phẩm
-                double GiaBan = (double) model.getValueAt(selectedRow, 2); // Giá bán
-                int SoLuongTon = (int) model.getValueAt(selectedRow, 3); // Số lượng tồn
-                String MoTaSanPham = (String) model.getValueAt(selectedRow, 4); // Mô tả
-                String MaDanhMuc = (String) model.getValueAt(selectedRow, 5); // Mã danh mục
 
-                // Mở cửa sổ sửa và truyền dữ liệu vào
-                new SuaSanPham().setVisible(true);
-            } else {
-                JOptionPane.showMessageDialog(QuanLySanPham.this, "Vui lòng chọn sản phẩm cần sửa.");
-            }
+        jButton4.addActionListener(new ActionListener() {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        // Lấy dòng đã chọn trong bảng
+        int selectedRow = jTable2.getSelectedRow();
+        if (selectedRow != -1) {
+            // Lấy thông tin sản phẩm đã chọn
+            String tenSanPham = (String) model.getValueAt(selectedRow, 1); // Tên sản phẩm
+            double giaBan = (double) model.getValueAt(selectedRow, 2); // Giá bán
+            int soLuongTon = (int) model.getValueAt(selectedRow, 3); // Số lượng tồn
+            String moTaSanPham = (String) model.getValueAt(selectedRow, 4); // Mô tả
+            String maDanhMuc = (String) model.getValueAt(selectedRow, 5); // Mã danh mục
+
+            // Mở cửa sổ sửa và truyền dữ liệu vào
+            new SuaSanPham(tenSanPham, giaBan, soLuongTon, moTaSanPham, maDanhMuc).setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(QuanLySanPham.this, "Vui lòng chọn sản phẩm cần sửa.");
         }
-    });
+    }
+});
+
     }
                 
 
@@ -150,7 +230,6 @@ private void connectDatabase() {
                     resultSet.getInt("SoLuongTon"),
                     resultSet.getString("MoTaSanPham"),
                     resultSet.getString("MaDanhMuc"),
-                    resultSet.getString("TrangThai")
                 };
                 model.addRow(row);
             }
@@ -223,7 +302,6 @@ private void searchProduct() {
                 resultSet.getInt("SoLuongTon"),
                 resultSet.getString("MoTaSanPham"),
                 resultSet.getString("MaDanhMuc"),
-                resultSet.getString("TrangThai")
             };
             model.addRow(row); // Thêm dòng mới vào model
         }
@@ -481,7 +559,7 @@ private void searchProduct() {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new QuanLySanPham().setVisible(true);
+                new QuanLySanPham("a").setVisible(true);
             }
         });
     }
