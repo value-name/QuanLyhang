@@ -164,40 +164,76 @@ public class SuaSanPham extends javax.swing.JFrame {
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
                                      
     // Lấy dữ liệu từ các trường nhập
-    String tenSanPham = jTextField6.getText();
-    double giaBan = Double.parseDouble(jTextField1.getText());
-    int soLuongTon = Integer.parseInt(jTextField4.getText());
-    String moTa = jTextField7.getText();
-    String maDanhMuc = jTextField3.getText();
+String tenSanPham = jTextField6.getText();
+String giaBanStr = jTextField1.getText();
+String soLuongTonStr = jTextField4.getText();
+String moTa = jTextField7.getText();
+String maDanhMuc = jTextField3.getText();
 
-    // Kết nối với cơ sở dữ liệu và thực hiện cập nhật
-    try {
-        String url = "jdbc:sqlserver://localhost:1433;databaseName=QUANLY;user=sa;password=123456;encrypt=true;trustServerCertificate=true;";
-        Connection con = DriverManager.getConnection(url);
-
-        // Câu lệnh SQL để cập nhật sản phẩm
-        String sql = "UPDATE SanPham SET TenSanPham = ?, GiaBan = ?, SoLuongTon = ?, MoTaSanPham = ?, MaDanhMuc = ? WHERE TenSanPham = ?";
-
-        PreparedStatement stmt = con.prepareStatement(sql);
-        stmt.setString(1, tenSanPham);
-        stmt.setDouble(2, giaBan);
-        stmt.setInt(3, soLuongTon);
-        stmt.setString(4, moTa);
-        stmt.setString(5, maDanhMuc);
-        stmt.setString(6, tenSanPham);
-
-        int rowsAffected = stmt.executeUpdate();
-
-        if (rowsAffected > 0) {
-            JOptionPane.showMessageDialog(this, "Cập nhật sản phẩm thành công!");
-        } else {
-            JOptionPane.showMessageDialog(this, "Lỗi: Không tìm thấy sản phẩm để cập nhật.");
-        }
-
-        con.close();
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Lỗi: " + e.getMessage());
+// Kiểm tra nếu giá bán và số lượng tồn không phải là số
+try {
+    // Kiểm tra giá bán
+    double giaBan = Double.parseDouble(giaBanStr); // Chuyển đổi giá bán từ chuỗi thành số
+    if (giaBan < 0) {
+        JOptionPane.showMessageDialog(this, "Lỗi: Giá bán không thể là số âm.");
+        return;
     }
+    
+    // Kiểm tra số lượng tồn
+    int soLuongTon = Integer.parseInt(soLuongTonStr); // Chuyển đổi số lượng tồn từ chuỗi thành số
+    if (soLuongTon < 0) {
+        JOptionPane.showMessageDialog(this, "Lỗi: Số lượng tồn không thể là số âm.");
+        return;
+    }
+
+    // Kiểm tra tên sản phẩm
+    if (tenSanPham == null || tenSanPham.trim().isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Lỗi: Tên sản phẩm không thể trống.");
+        return;
+    }
+    
+    // Kết nối với cơ sở dữ liệu và thực hiện cập nhật
+    String url = "jdbc:sqlserver://localhost:1433;databaseName=QUANLY;user=sa;password=123456;encrypt=true;trustServerCertificate=true;";
+    Connection con = DriverManager.getConnection(url);
+
+    // Câu lệnh SQL để cập nhật sản phẩm
+    String sql = "UPDATE SanPham SET TenSanPham = ?, GiaBan = ?, SoLuongTon = ?, MoTaSanPham = ?, MaDanhMuc = ? WHERE TenSanPham = ?";
+
+    // Prepare the statement
+    PreparedStatement stmt = con.prepareStatement(sql);
+    stmt.setString(1, tenSanPham);  // New product name
+    stmt.setDouble(2, giaBan);
+    stmt.setInt(3, soLuongTon);
+    stmt.setString(4, moTa);
+    stmt.setString(5, maDanhMuc);
+    stmt.setString(6, tenSanPham);  // Old product name (to identify the product to update)
+
+    // Execute the update
+    int rowsAffected = stmt.executeUpdate();
+
+    // Check the result
+    if (rowsAffected > 0) {
+        JOptionPane.showMessageDialog(this, "Cập nhật sản phẩm thành công!");
+    } else {
+        JOptionPane.showMessageDialog(this, "Lỗi: Không thể thay đổi tên sản phẩm .");
+    }
+
+    // Close the connection
+    con.close();
+} catch (NumberFormatException nfe) {
+    // Handle invalid number format (non-numeric input)
+    JOptionPane.showMessageDialog(this, "Lỗi: Giá bán hoặc số lượng tồn phải là số hợp lệ.");
+    nfe.printStackTrace();
+} catch (NullPointerException npe) {
+    // NullPointerException - Handle null pointer errors
+    JOptionPane.showMessageDialog(this, "Lỗi: Dữ liệu không hợp lệ (null value).");
+    npe.printStackTrace();
+} catch (Exception e) {
+    // General Exception - Catch any other errors
+    JOptionPane.showMessageDialog(this, "Lỗi không xác định: " + e.getMessage());
+    e.printStackTrace();
+}
+
 
     }//GEN-LAST:event_jButton1ActionPerformed
 
